@@ -3,7 +3,18 @@ const { jwtSecret } = require("../config/loginConfig");
 require("dotenv").config();
 
 /**
- * JWT validation middleware, verify our JWT in requests
+ * Express middleware that guards every protected route. Verifies the caller
+ * is holding a valid, unexpired access token before letting the request reach
+ * the route handler.
+ *
+ * Expects an "Authorization: Bearer <token>" header (set on the frontend by
+ * the axios interceptor in useAxiosPrivate). If the token is missing, we
+ * return 401 so the frontend knows to send the user to login. If the token
+ * is present but invalid or expired, we return 403 — the axios response
+ * interceptor treats 403 as "try to refresh the token and retry once."
+ *
+ * On success, we attach the decoded user id to req.user so downstream
+ * handlers know which user is making the request without re-parsing the JWT.
  */
 function ValidateToken(req, res, next) {
 	console.log("in validate token");

@@ -4,6 +4,20 @@ require("dotenv").config();
 const User = require("../user/userSchema");
 const config = require("../config/loginConfig");
 
+/**
+ * Creates a new user account. Password is hashed with bcrypt before it ever
+ * touches the database — the plaintext password is never stored.
+ *
+ * The `name` field is optional (username, email, and password are required),
+ * so we branch on whether it was provided in the request body.
+ *
+ * Responses:
+ *   201 { created: true }                 — account created
+ *   403 { created: false, message }       — email already exists (Mongo
+ *                                            duplicate key error code 11000)
+ *   409 { created: false, message }       — validation failed for another
+ *                                            reason (e.g. password too short)
+ */
 async function createAccount(req, res, next) {
 	var name;
 	var email = req.body.email;
@@ -52,6 +66,23 @@ async function createAccount(req, res, next) {
 	}
 }
 
+/**
+ * Signs an existing user in and hands them two tokens:
+ *
+ *   1. An access token (JWT) — expires in 90 seconds. Sent back in the JSON
+ *      response so the frontend can hold it in memory and attach it to every
+ *      protected request as "Authorization: Bearer <token>". Kept short so
+ *      that if it's ever leaked, the window of abuse is small.
+ *
+ *   2. A refresh token (JWT) — expires in 1 day. Stored in an httpOnly cookie
+ *      so JavaScript on the page can NOT read it (protects against XSS token
+ *      theft). We also persist it on the user document so we can validate
+ *      that a refresh request is using a token we actually issued.
+ *
+ * Responses:
+ *   200 { accessToken, message }  — logged in
+ *   401 { message }               — wrong password or no user with that email
+ */
 async function signIn(req, res, next) {
 	var email = req.body.email;
 	var pass = req.body.pass;

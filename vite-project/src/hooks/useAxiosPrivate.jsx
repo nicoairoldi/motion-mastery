@@ -5,6 +5,25 @@ import { useEffect } from "react";
 import UseRefreshToken from "./useRefreshToken";
 import UseAuth from "./useAuth";
 
+/**
+ * Custom hook that returns an axios instance pre-wired for authenticated
+ * requests. It attaches two interceptors so components can just call
+ * axiosPrivate.get(...) without worrying about tokens or expiry.
+ *
+ * Request interceptor:
+ *   Attaches the current in-memory access token as
+ *   "Authorization: Bearer <token>" on every outgoing request (unless the
+ *   caller already set it themselves).
+ *
+ * Response interceptor:
+ *   If the server responds 403 (access token expired), we hit the /auth
+ *   refresh endpoint to get a new access token, then retry the original
+ *   request exactly once. The `prevRequest.sent` flag prevents an infinite
+ *   retry loop if the refresh itself keeps failing.
+ *
+ * The end result: from the user's perspective, sessions "just work" for as
+ * long as the refresh cookie is valid — the token dance is invisible.
+ */
 export default function UseAxiosPrivte() {
 	const refresh = UseRefreshToken();
 	const { auth } = UseAuth();

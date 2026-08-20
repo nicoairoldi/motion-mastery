@@ -3,6 +3,25 @@ require("dotenv").config();
 const User = require("../user/userSchema");
 const config = require("../config/loginConfig");
 
+
+/**
+ * Issues a new access token using the refresh token stored in the httpOnly
+ * JWT_TOKEN cookie. This lets the frontend silently re-authenticate the user
+ * whenever the short-lived access token expires, so they don't get bounced
+ * back to the login page mid-session.
+ *
+ * Flow:
+ *   1. Read the refresh token from the JWT_TOKEN cookie
+ *   2. Look up the user by that refreshToken in the DB — this ensures the
+ *      token was actually issued by us and hasn't been revoked
+ *   3. Verify the refresh JWT signature against refreshSecret
+ *   4. Sign and return a new short-lived access token
+ *
+ * Responses:
+ *   200 { accessToken }  — success
+ *   401                  — no cookie sent (or unexpected server error)
+ *   403                  — token invalid, expired, or doesn't match the user
+ */
 async function handleRefreshToken(req, res, next) {
 	//console.log("in handleRefreshToken");
 	const cookies = req.cookies;
